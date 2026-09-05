@@ -527,12 +527,12 @@
         <!-- Mic & Mobile Guidance Banner -->
         <div class="permission-notice" id="perm-notice">
             <div style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
-                <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent);"></i>
-                <span id="mic-status-title">📱 スマホでの高精度音声認識モード（有効化済み）</span>
+                <i class="fa-solid fa-shield-halved" style="color: var(--accent);"></i>
+                <span id="mic-status-title">🎙️ マイクアクセスのワンタイム許可モード</span>
             </div>
             <div id="mic-status-desc" style="font-size: 0.82rem; color: #e2e8f0;">
-                ・ノイズキャンセリング＆複数音素候補解析（maxAlternatives）によりスマホの認識精度を大幅向上しました。<br>
-                ・スマホのマイクから<b>15cm〜20cm程度の距離でハキハキと話す</b>とPCと同等の最高精度で認識されます。
+                ・Web URL (HTTPS) で開いている場合、最初に一度マイクを「許可」すれば問題ごとに許可ダイアログは出ません。<br>
+                ・音声処理バグ（録音中に途中確定されず0%判定になる問題）を修正いたしました。
             </div>
         </div>
 
@@ -545,7 +545,7 @@
                 <i class="fa-solid fa-puzzle-piece"></i> Part D: 文の構築 (15問)
             </button>
             <button class="part-tab" id="tab-part_c" onclick="switchPart('part_c')">
-                <i class="fa-solid fa-circle-question"></i> Part C: 質問応答 (15问)
+                <i class="fa-solid fa-circle-question"></i> Part C: 質問応答 (15問)
             </button>
             <button class="part-tab" id="tab-part_a" onclick="switchPart('part_a')">
                 <i class="fa-solid fa-book-open"></i> Part A: 音読 (8問)
@@ -675,17 +675,16 @@
         // User Stats
         let userStats = JSON.parse(localStorage.getItem("VERSANT_USER_STATS") || "{}");
 
-        // Speech Recognition & Multi-candidate Setup
+        // Speech Recognition Setup
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let recognizedCandidates = [];
         let primaryRecognizedText = "";
-        let audioStream = null;
-        let audioMeterInterval = null;
+        let globalMicStream = null;
 
-        // Warmup Hardware Noise Suppression & Auto Gain Control via getUserMedia
-        function initMicHardware() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Warmup Hardware Noise Suppression & Keep Mic Stream Open ONCE
+        function requestGlobalMicPermission() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !globalMicStream) {
                 navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: true,
@@ -693,8 +692,10 @@
                         autoGainControl: true
                     }
                 }).then(stream => {
-                    audioStream = stream;
+                    globalMicStream = stream;
                     setupMicVisualizer(stream);
+                    document.getElementById("mic-status-title").textContent = "🎙️ マイクアクセス許可済み";
+                    document.getElementById("mic-status-desc").innerHTML = "マイクは許可されています。問題ごとのダイアログ表示なしでサクサク練習できます！";
                 }).catch(err => {
                     console.warn("Hardware audio constraint notice:", err);
                 });
@@ -712,7 +713,7 @@
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 const bars = document.querySelectorAll(".meter-bar");
 
-                audioMeterInterval = setInterval(() => {
+                setInterval(() => {
                     if (testState === "recording") {
                         analyser.getByteFrequencyData(dataArray);
                         let avg = 0;
@@ -741,24 +742,26 @@
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = true;
-            recognition.maxAlternatives = 5; // Multi-candidate analysis for mobile accuracy
+            recognition.maxAlternatives = 5;
             recognition.lang = "en-US";
 
             recognition.onresult = (event) => {
+                let currentFullText = "";
                 recognizedCandidates = [];
-                let interim = "";
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
+
+                for (let i = 0; i < event.results.length; ++i) {
                     const res = event.results[i];
-                    if (res.isFinal) {
-                        for (let j = 0; j < res.length; j++) {
+                    currentFullText += res[0].transcript + " ";
+                    for (let j = 0; j < res.length; j++) {
+                        if (res[j].transcript) {
                             recognizedCandidates.push(res[j].transcript);
                         }
-                        primaryRecognizedText = res[0].transcript;
-                    } else {
-                        interim += res[0].transcript;
                     }
                 }
-                document.getElementById("stage-hint-text").textContent = `認識中: "${primaryRecognizedText || interim}"`;
+                
+                // Store accumulated recognized text (both interim and final)
+                primaryRecognizedText = currentFullText.trim();
+                document.getElementById("stage-hint-text").textContent = `認識中: "${primaryRecognizedText}"`;
             };
 
             recognition.onerror = (event) => {
@@ -837,7 +840,6 @@
         }
 
         function init() {
-            initMicHardware();
             loadQuestion(0);
             updateOverallScore();
         }
@@ -901,6 +903,7 @@
         }
 
         function handleActionClick() {
+            requestGlobalMicPermission(); // Ask once at start
             if (testState === "idle" || testState === "evaluating") {
                 startTestFlow();
             } else if (testState === "recording") {
@@ -997,7 +1000,7 @@
             document.getElementById("stage-hint-text").textContent = hint;
         }
 
-        // Multi-candidate High-Precision Evaluation
+        // Multi-candidate & Interim High-Precision Evaluation
         function evaluateResponse() {
             const q = DATA[currentPart][currentIndex];
             let target = "";
@@ -1022,7 +1025,7 @@
                     let score = 0;
                     if (currentPart === "part_c") {
                         const match = q.ans.some(a => candClean.includes(cleanText(a)));
-                        score = match ? 100 : 30;
+                        score = match ? 100 : (candClean.length > 0 ? 40 : 0);
                     } else {
                         score = computeWordAccuracy(targetClean, candClean);
                     }
