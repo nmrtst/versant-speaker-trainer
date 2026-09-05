@@ -679,6 +679,7 @@
         let recordingTimeout = null;
         let recordingStartTime = 0;
         let currentDurationMs = 10000;
+        let accumulatedText = "";
 
         // User Stats
         let userStats = JSON.parse(localStorage.getItem("VERSANT_USER_STATS") || "{}");
@@ -746,9 +747,22 @@
             }
         }
 
+        function isSpokenTextComplete(targetStr, actualStr) {
+            if (!actualStr || !targetStr) return false;
+            const targetClean = cleanText(targetStr).split(/\s+/).filter(Boolean);
+            const actualClean = cleanText(actualStr).split(/\s+/).filter(Boolean);
+            if (targetClean.length === 0 || actualClean.length === 0) return false;
+
+            const lastTargetWord = targetClean[targetClean.length - 1];
+            const hasLastWord = actualClean.includes(lastTargetWord);
+            const wordRatio = actualClean.length / targetClean.length;
+
+            return hasLastWord || wordRatio >= 0.85;
+        }
+
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = false;
+            recognition.continuous = true;
             recognition.interimResults = true;
             recognition.maxAlternatives = 5;
             recognition.lang = "en-US";
@@ -767,8 +781,19 @@
                     }
                 }
                 
-                primaryRecognizedText = currentFullText.trim();
+                const combined = (accumulatedText + " " + currentFullText).trim();
+                primaryRecognizedText = combined;
                 document.getElementById("stage-hint-text").textContent = `認識中: "${primaryRecognizedText}"`;
+
+                const q = DATA[currentPart][currentIndex];
+                let target = "";
+                if (currentPart === "part_a" || currentPart === "part_b") target = q.text;
+                else if (currentPart === "part_c") target = (q.ans && q.ans[0]) ? q.ans[0] : "";
+                else if (currentPart === "part_d") target = q.ans;
+
+                if (isSpokenTextComplete(target, primaryRecognizedText)) {
+                    finishRecording(true);
+                }
             };
 
             recognition.onerror = (event) => {
@@ -778,13 +803,29 @@
                     document.getElementById("mic-status-desc").innerHTML = "ブラウザのサイト設定でマイクのアクセス権限を「許可」に設定してください。";
                 }
                 if (testState === "recording") {
-                    finishRecording(true); // early finish on error
+                    finishRecording(true);
                 }
             };
 
             recognition.onend = () => {
                 if (testState === "recording") {
-                    finishRecording(true); // early finish on end of speech
+                    accumulatedText = primaryRecognizedText;
+                    const elapsed = Date.now() - recordingStartTime;
+                    const q = DATA[currentPart][currentIndex];
+                    let target = "";
+                    if (currentPart === "part_a" || currentPart === "part_b") target = q.text;
+                    else if (currentPart === "part_c") target = (q.ans && q.ans[0]) ? q.ans[0] : "";
+                    else if (currentPart === "part_d") target = q.ans;
+
+                    if (isSpokenTextComplete(target, primaryRecognizedText) || elapsed >= currentDurationMs - 600) {
+                        finishRecording(true);
+                    } else {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.warn("Recognition restart note:", e);
+                        }
+                    }
                 }
             };
         }
@@ -972,6 +1013,7 @@
         function startRecording(durationMs) {
             recordingStartTime = Date.now();
             currentDurationMs = durationMs;
+            accumulatedText = "";
             primaryRecognizedText = "";
             recognizedCandidates = [];
             if (recognition) {
