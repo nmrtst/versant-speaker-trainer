@@ -531,8 +531,8 @@
                 <span id="mic-status-title">🎙️ マイクアクセスのワンタイム許可モード</span>
             </div>
             <div id="mic-status-desc" style="font-size: 0.82rem; color: #e2e8f0;">
-                ・Web URL (HTTPS) で開いている場合、最初に一度マイクを「許可」すれば問題ごとに許可ダイアログは出ません。<br>
-                ・音声処理バグ（録音中に途中確定されず0%判定になる問題）を修正いたしました。
+                ・Web URL (HTTPS) でアクセスした場合、一度許可すれば問題ごとのダイアログポップアップは出ません。<br>
+                ・音声入力が途中で終了した場合のタイマーの急加減・タイマー表示を滑らかに修復しました。
             </div>
         </div>
 
@@ -759,7 +759,6 @@
                     }
                 }
                 
-                // Store accumulated recognized text (both interim and final)
                 primaryRecognizedText = currentFullText.trim();
                 document.getElementById("stage-hint-text").textContent = `認識中: "${primaryRecognizedText}"`;
             };
@@ -771,13 +770,13 @@
                     document.getElementById("mic-status-desc").innerHTML = "ブラウザのサイト設定でマイクのアクセス権限を「許可」に設定してください。";
                 }
                 if (testState === "recording") {
-                    finishRecording();
+                    finishRecording(true); // early finish on error
                 }
             };
 
             recognition.onend = () => {
                 if (testState === "recording") {
-                    finishRecording();
+                    finishRecording(true); // early finish on end of speech
                 }
             };
         }
@@ -907,7 +906,7 @@
             if (testState === "idle" || testState === "evaluating") {
                 startTestFlow();
             } else if (testState === "recording") {
-                finishRecording();
+                finishRecording(true);
             } else if (testState === "playing_prompt") {
                 stopAzureAudio();
                 resetState();
@@ -920,10 +919,10 @@
             const q = DATA[currentPart][currentIndex];
 
             if (currentPart === "part_a") {
-                // Part A: Reading (8 seconds recording)
+                // Part A: Reading (10 seconds recording time limit)
                 testState = "recording";
                 updateStageUI("recording", "fa-solid fa-microphone", "英文を声に出して読んでください...");
-                startRecording(8000);
+                startRecording(10000);
                 return;
             }
 
@@ -960,6 +959,7 @@
             // Animate Timer
             const startTime = Date.now();
             const bar = document.getElementById("timer-bar");
+            bar.style.transition = "width 0.1s linear";
             bar.style.width = "0%";
 
             clearInterval(timerInterval);
@@ -974,22 +974,29 @@
 
             clearTimeout(recordingTimeout);
             recordingTimeout = setTimeout(() => {
-                finishRecording();
+                finishRecording(false); // full time limit reached
             }, durationMs);
         }
 
-        function finishRecording() {
+        function finishRecording(isEarly = false) {
             if (testState !== "recording") return;
             testState = "evaluating";
             clearInterval(timerInterval);
             clearTimeout(recordingTimeout);
-            document.getElementById("timer-bar").style.width = "100%";
+
+            const bar = document.getElementById("timer-bar");
+            if (isEarly) {
+                // Smooth transition to 100% on early finish
+                bar.style.transition = "width 0.3s ease-out";
+            }
+            bar.style.width = "100%";
 
             if (recognition) {
                 try { recognition.stop(); } catch(e){}
             }
 
-            updateStageUI("", "fa-solid fa-rotate-right", "採点完了 (もう一度話す)");
+            const hint = isEarly ? "発話終了を自動検知しました (評価中...)" : "制限時間終了 (評価中...)";
+            updateStageUI("", "fa-solid fa-rotate-right", hint);
             evaluateResponse();
         }
 
