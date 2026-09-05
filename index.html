@@ -784,16 +784,6 @@
                 const combined = (accumulatedText + " " + currentFullText).trim();
                 primaryRecognizedText = combined;
                 document.getElementById("stage-hint-text").textContent = `認識中: "${primaryRecognizedText}"`;
-
-                const q = DATA[currentPart][currentIndex];
-                let target = "";
-                if (currentPart === "part_a" || currentPart === "part_b") target = q.text;
-                else if (currentPart === "part_c") target = (q.ans && q.ans[0]) ? q.ans[0] : "";
-                else if (currentPart === "part_d") target = q.ans;
-
-                if (isSpokenTextComplete(target, primaryRecognizedText)) {
-                    finishRecording(true);
-                }
             };
 
             recognition.onerror = (event) => {
@@ -803,7 +793,10 @@
                     document.getElementById("mic-status-desc").innerHTML = "ブラウザのサイト設定でマイクのアクセス権限を「許可」に設定してください。";
                 }
                 if (testState === "recording") {
-                    finishRecording(true);
+                    const elapsed = Date.now() - recordingStartTime;
+                    if (elapsed < currentDurationMs - 500) {
+                        try { recognition.start(); } catch(e){}
+                    }
                 }
             };
 
@@ -811,15 +804,8 @@
                 if (testState === "recording") {
                     accumulatedText = primaryRecognizedText;
                     const elapsed = Date.now() - recordingStartTime;
-                    const q = DATA[currentPart][currentIndex];
-                    let target = "";
-                    if (currentPart === "part_a" || currentPart === "part_b") target = q.text;
-                    else if (currentPart === "part_c") target = (q.ans && q.ans[0]) ? q.ans[0] : "";
-                    else if (currentPart === "part_d") target = q.ans;
-
-                    if (isSpokenTextComplete(target, primaryRecognizedText) || elapsed >= currentDurationMs - 600) {
-                        finishRecording(true);
-                    } else {
+                    // Strict full-duration mode: Never auto-finish early! Keep listening until timer expires!
+                    if (elapsed < currentDurationMs - 500) {
                         try {
                             recognition.start();
                         } catch(e) {
@@ -986,7 +972,7 @@
             if (currentPart === "part_a") {
                 // Part A: Reading (10 seconds recording time limit)
                 testState = "recording";
-                updateStageUI("recording", "fa-solid fa-microphone", "英文を声に出して読んでください...");
+                updateStageUI("recording", "fa-solid fa-microphone", "英文を声に出して読んでください（制限時間いっぱいまで待ちます）...");
                 startRecording(10000);
                 return;
             }
@@ -1003,7 +989,7 @@
 
                 setTimeout(() => {
                     testState = "recording";
-                    updateStageUI("recording", "fa-solid fa-microphone", "マイクに向かって話してください！");
+                    updateStageUI("recording", "fa-solid fa-microphone", "マイクに向かって話してください（制限時間いっぱいまで待ちます）");
                     const timeLimit = (currentPart === "part_c") ? 4000 : ((currentPart === "part_b" && (q.level || '').includes("Long")) ? 8000 : 6000);
                     startRecording(timeLimit);
                 }, 350);
