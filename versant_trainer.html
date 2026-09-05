@@ -802,15 +802,20 @@
 
             recognition.onend = () => {
                 if (testState === "recording") {
-                    accumulatedText = primaryRecognizedText;
+                    if (primaryRecognizedText) {
+                        accumulatedText = primaryRecognizedText;
+                    }
                     const elapsed = Date.now() - recordingStartTime;
-                    // Strict full-duration mode: Never auto-finish early! Keep listening until timer expires!
-                    if (elapsed < currentDurationMs - 500) {
-                        try {
-                            recognition.start();
-                        } catch(e) {
-                            console.warn("Recognition restart note:", e);
-                        }
+                    if (elapsed < currentDurationMs - 600) {
+                        setTimeout(() => {
+                            if (testState === "recording") {
+                                try {
+                                    recognition.start();
+                                } catch(e) {
+                                    console.warn("Recognition safe restart note:", e);
+                                }
+                            }
+                        }, 100);
                     }
                 }
             };
@@ -1002,12 +1007,24 @@
             accumulatedText = "";
             primaryRecognizedText = "";
             recognizedCandidates = [];
+
             if (recognition) {
-                try {
-                    recognition.start();
-                } catch(e) {
-                    console.warn("Recognition start warning:", e);
-                }
+                try { recognition.abort(); } catch(e){}
+                setTimeout(() => {
+                    if (testState === "recording") {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.warn("First start attempt failed, retrying after abort:", e);
+                            try { recognition.abort(); } catch(err){}
+                            setTimeout(() => {
+                                if (testState === "recording") {
+                                    try { recognition.start(); } catch(err2) { console.error("Recognition start failed completely:", err2); }
+                                }
+                            }, 100);
+                        }
+                    }
+                }, 80);
             }
 
             // Animate Timer & Digital Countdown
