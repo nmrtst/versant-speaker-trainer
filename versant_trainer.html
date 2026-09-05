@@ -602,8 +602,14 @@
                 <div class="stage-hint" id="stage-hint-text">
                     「▶ スタート」ボタンを押してテスト開始
                 </div>
-                <div class="timer-wrapper">
-                    <div class="timer-bar" id="timer-bar"></div>
+                <div class="timer-container" style="width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 700; font-family: 'Outfit', 'Inter', monospace;">
+                        <span style="color: var(--text-sub);" id="timer-status-label"><i class="fa-solid fa-stopwatch"></i> タイマー</span>
+                        <span id="timer-countdown-text" style="color: var(--accent); font-size: 1.15rem; font-weight: 800;">10.0 秒</span>
+                    </div>
+                    <div class="timer-wrapper">
+                        <div class="timer-bar" id="timer-bar"></div>
+                    </div>
                 </div>
             </div>
 
@@ -671,6 +677,8 @@
         let testState = "idle"; // idle, playing_prompt, beep, recording, evaluating
         let timerInterval = null;
         let recordingTimeout = null;
+        let recordingStartTime = 0;
+        let currentDurationMs = 10000;
 
         // User Stats
         let userStats = JSON.parse(localStorage.getItem("VERSANT_USER_STATS") || "{}");
@@ -894,11 +902,27 @@
             primaryRecognizedText = "";
             recognizedCandidates = [];
 
+            const defaultLimit = getCurrentTimeLimit();
+            const digits = document.getElementById("timer-countdown-text");
+            if (digits) {
+                digits.style.color = "var(--accent)";
+                digits.textContent = `${(defaultLimit / 1000).toFixed(1)} 秒`;
+            }
+
             document.getElementById("btn-action").className = "mic-btn";
             document.getElementById("action-icon").className = "fa-solid fa-play";
             document.getElementById("stage-hint-text").textContent = "「▶ スタート」ボタンを押してテスト開始";
             document.getElementById("timer-bar").style.width = "0%";
             document.getElementById("result-box").classList.remove("show");
+        }
+
+        function getCurrentTimeLimit() {
+            if (currentPart === "part_a") return 10000;
+            if (currentPart === "part_c") return 4000;
+            if (currentPart === "part_d") return 7000;
+            const list = DATA[currentPart] || [];
+            const q = list[currentIndex] || {};
+            return (q.level || '').includes("Long") ? 8000 : 6000;
         }
 
         function handleActionClick() {
@@ -946,6 +970,8 @@
         }
 
         function startRecording(durationMs) {
+            recordingStartTime = Date.now();
+            currentDurationMs = durationMs;
             primaryRecognizedText = "";
             recognizedCandidates = [];
             if (recognition) {
@@ -956,17 +982,28 @@
                 }
             }
 
-            // Animate Timer
-            const startTime = Date.now();
+            // Animate Timer & Digital Countdown
             const bar = document.getElementById("timer-bar");
+            const digits = document.getElementById("timer-countdown-text");
             bar.style.transition = "width 0.1s linear";
             bar.style.width = "0%";
+            if (digits) {
+                digits.style.color = "var(--danger)";
+                digits.textContent = `残り ${(durationMs / 1000).toFixed(1)} 秒`;
+            }
 
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
+                const elapsed = Date.now() - recordingStartTime;
+                const remainingMs = Math.max(0, durationMs - elapsed);
+                const remainingSec = (remainingMs / 1000).toFixed(1);
+                
                 const pct = Math.min(100, (elapsed / durationMs) * 100);
                 bar.style.width = `${pct}%`;
+                if (digits) {
+                    digits.textContent = `残り ${remainingSec} 秒`;
+                }
+
                 if (elapsed >= durationMs) {
                     clearInterval(timerInterval);
                 }
@@ -984,10 +1021,24 @@
             clearInterval(timerInterval);
             clearTimeout(recordingTimeout);
 
+            const elapsedMs = Date.now() - recordingStartTime;
+            const elapsedSec = (elapsedMs / 1000).toFixed(1);
+            const totalSec = (currentDurationMs / 1000).toFixed(1);
+
             const bar = document.getElementById("timer-bar");
+            const digits = document.getElementById("timer-countdown-text");
+
             if (isEarly) {
-                // Smooth transition to 100% on early finish
                 bar.style.transition = "width 0.3s ease-out";
+                if (digits) {
+                    digits.style.color = "var(--warning)";
+                    digits.textContent = `自動終了 (${elapsedSec}秒 / ${totalSec}秒)`;
+                }
+            } else {
+                if (digits) {
+                    digits.style.color = "var(--success)";
+                    digits.textContent = `0.0 秒 (完了)`;
+                }
             }
             bar.style.width = "100%";
 
@@ -995,7 +1046,7 @@
                 try { recognition.stop(); } catch(e){}
             }
 
-            const hint = isEarly ? "発話終了を自動検知しました (評価中...)" : "制限時間終了 (評価中...)";
+            const hint = isEarly ? `発話終了を自動検知しました (${elapsedSec}秒で完了・評価中...)` : "制限時間終了 (評価中...)";
             updateStageUI("", "fa-solid fa-rotate-right", hint);
             evaluateResponse();
         }
