@@ -721,6 +721,7 @@
                     </div>
                     <div style="display: flex; gap: 6px;" id="dash-filter-btns">
                         <button class="nav-btn primary" id="filter-all" onclick="renderHistoryTable('all')" style="font-size: 0.75rem; padding: 4px 10px;">すべて</button>
+                        <button class="nav-btn" id="filter-weak" onclick="renderHistoryTable('weak')" style="font-size: 0.75rem; padding: 4px 10px; color: var(--warning);">🟡 要練習のみ</button>
                         <button class="nav-btn" id="filter-part_b" onclick="renderHistoryTable('part_b')" style="font-size: 0.75rem; padding: 4px 10px;">Part B</button>
                         <button class="nav-btn" id="filter-part_d" onclick="renderHistoryTable('part_d')" style="font-size: 0.75rem; padding: 4px 10px;">Part D</button>
                         <button class="nav-btn" id="filter-part_c" onclick="renderHistoryTable('part_c')" style="font-size: 0.75rem; padding: 4px 10px;">Part C</button>
@@ -1484,7 +1485,7 @@
             const tbody = document.getElementById("dash-history-tbody");
             tbody.innerHTML = "";
 
-            ["all", "part_b", "part_d", "part_c", "part_a"].forEach(p => {
+            ["all", "weak", "part_b", "part_d", "part_c", "part_a"].forEach(p => {
                 const btn = document.getElementById(`filter-${p}`);
                 if (btn) {
                     if (p === filterPart) btn.className = "nav-btn primary";
@@ -1494,9 +1495,14 @@
 
             const allItems = [];
             Object.keys(DATA).forEach(pKey => {
-                if (filterPart === "all" || filterPart === pKey) {
+                if (filterPart === "all" || filterPart === "weak" || filterPart === pKey) {
                     DATA[pKey].forEach((item, idx) => {
-                        allItems.push({ ...item, partKey: pKey, itemIndex: idx });
+                        const statKey = `${pKey}_${item.id}`;
+                        const st = userStats[statKey] || null;
+                        const isWeak = !st || (st.pct < 75 && !st.cleared);
+                        if (filterPart !== "weak" || isWeak) {
+                            allItems.push({ ...item, partKey: pKey, itemIndex: idx });
+                        }
                     });
                 }
             });
