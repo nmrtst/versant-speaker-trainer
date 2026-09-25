@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>英語学習 復習アプリ ポータル Portal</title>
+    <title>TOEIC & Versant 英語学習ポータル Portal</title>
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,7 @@
             --success: #10b981;
             --purple: #8b5cf6;
             --amber: #f59e0b;
+            --cyan: #06b6d4;
             --radius-md: 14px;
             --radius-lg: 20px;
         }
@@ -56,7 +57,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.8rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #fcd34d 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 6px;
@@ -69,7 +70,7 @@
 
         /* Main Container */
         .container {
-            max-width: 900px;
+            max-width: 960px;
             width: 100%;
             margin: 0 auto;
             padding: 24px 16px;
@@ -128,6 +129,7 @@
         .icon-blue { background: rgba(56, 139, 253, 0.15); color: var(--accent); border: 1px solid var(--accent); }
         .icon-green { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
         .icon-purple { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid var(--purple); }
+        .icon-cyan { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid var(--cyan); }
         .icon-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid var(--amber); }
 
         .badge {
@@ -140,6 +142,8 @@
         .badge-new { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid var(--success); }
         .badge-v2 { background: rgba(56, 139, 253, 0.2); color: #60a5fa; border: 1px solid var(--accent); }
         .badge-purple { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid var(--purple); }
+        .badge-cyan { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid var(--cyan); }
+        .badge-amber { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid var(--amber); }
 
         .app-title {
             font-family: 'Outfit', sans-serif;
@@ -181,21 +185,57 @@
 
     <header>
         <h1 class="header-title">TOEIC & Versant English Learning Portal</h1>
-        <p class="header-sub">これまでの学習教材・連続復習Webアプリ プラットフォーム</p>
+        <p class="header-sub">これまでの全学習教材・連続復習Webアプリ プラットフォーム</p>
     </header>
 
     <div class="container">
         
         <div class="grid">
+
+            <!-- App 1: Part 7 Speed Reading (NEW) -->
+            <a href="part7_speed_reading.html" class="app-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-box icon-cyan">
+                            <i class="fa-solid fa-gauge-high"></i>
+                        </div>
+                        <span class="badge badge-cyan">✨ NEW</span>
+                    </div>
+                    <h2 class="app-title">Part 7 速読演習 連続プレイヤー</h2>
+                    <p class="app-desc">Ch.1〜Ch.2（全56トラック）の速読用音声を体系的に連続再生。1.0x〜2.25xの高速再生モードで読書＆耳スピードを倍速強化。</p>
+                </div>
+                <div class="card-footer" style="color: #67e8f9;">
+                    <span>全56トラック 倍速対応</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <!-- App 2: TOEIC Mock Trainer (NEW) -->
+            <a href="toeic_mock_trainer.html" class="app-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-box icon-amber">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <span class="badge badge-amber">✨ NEW</span>
+                    </div>
+                    <h2 class="app-title">TOEIC 精選模試 総合特訓</h2>
+                    <p class="app-desc">精選模試の Part 2 応答演習、Part 3/4 会話・文章トランスクリプト特訓、および集中学習145文をワンストップで復習。</p>
+                </div>
+                <div class="card-footer" style="color: var(--amber);">
+                    <span>Part 2 / 3 / 4 / 145文</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </a>
             
-            <!-- App 1: Part 2 Continuous Review (NEW) -->
+            <!-- App 3: Part 2 Continuous Review -->
             <a href="part2_review.html" class="app-card">
                 <div>
                     <div class="card-header">
                         <div class="icon-box icon-green">
                             <i class="fa-solid fa-headphones"></i>
                         </div>
-                        <span class="badge badge-new">✨ NEW</span>
+                        <span class="badge badge-new">Part 2</span>
                     </div>
                     <h2 class="app-title">Part 2 質問+正解のみ 連続復習</h2>
                     <p class="app-desc">正解のパターン全300問から誤答選択肢を除外し、「質問 ➡ 正解の応答」のみを連続自動再生！効率的な聞き流し＆シャドーイング特訓。</p>
@@ -206,14 +246,14 @@
                 </div>
             </a>
 
-            <!-- App 2: Part 7 Phrases 200 (NEW) -->
+            <!-- App 4: Part 7 Phrases 200 -->
             <a href="part7_phrases.html" class="app-card">
                 <div>
                     <div class="card-header">
                         <div class="icon-box icon-purple">
                             <i class="fa-solid fa-book-open"></i>
                         </div>
-                        <span class="badge badge-purple">✨ NEW</span>
+                        <span class="badge badge-purple">Part 7</span>
                     </div>
                     <h2 class="app-title">Part 7 厳選フレーズ200 連続復習</h2>
                     <p class="app-desc">TOEIC Part 7 頻出フレーズ200件の一覧＆実戦例文を全網羅。Azure Neural Voiceクリア音声で連続自動再生＆要復習ブックマーク。</p>
@@ -224,14 +264,14 @@
                 </div>
             </a>
 
-            <!-- App 3: Versant Speaker Trainer V2 -->
+            <!-- App 5: Versant Speaker Trainer V2 -->
             <a href="versant_trainer.html" class="app-card">
                 <div>
                     <div class="card-header">
                         <div class="icon-box icon-blue">
                             <i class="fa-solid fa-microphone-lines"></i>
                         </div>
-                        <span class="badge badge-v2">V2 UPGRADE</span>
+                        <span class="badge badge-v2">Versant</span>
                     </div>
                     <h2 class="app-title">Versant Speaker Trainer</h2>
                     <p class="app-desc">Part A〜F（音読・復唱・質問回答・語句並べ替え・ストーリー再現・自由回答）のフルパート対応Versant総合スピーキング特訓アプリ。</p>
@@ -242,7 +282,7 @@
                 </div>
             </a>
 
-            <!-- App 4: ChemReg English Vocab -->
+            <!-- App 6: ChemReg English Flashcards -->
             <a href="chemreg.html" class="app-card">
                 <div>
                     <div class="card-header">
